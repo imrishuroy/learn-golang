@@ -1,0 +1,11 @@
+{
+    "init": {
+        "serial": "A1234P",
+        "make": "ChargePoint",
+        "model": "E1343"
+    },
+    "tagId": {
+        "id": "12345",
+        "name": "tag name"
+    }
+}
