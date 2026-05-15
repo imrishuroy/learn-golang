@@ -2,189 +2,344 @@ package main
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
-// func f1(s string) {
-// 	fmt.Printf("In goroutine printing %s\n", s)
-// }
+/*
+  CONCURRENCY IN GO: GOROUTINES, CHANNELS, AND SYNC
 
-// func compressit(fileName string) {
-// 	fmt.Println("Compressing", fileName)
-// }
+KEY POINTS:
+  - Goroutines: Lightweight threads managed by Go runtime
+  - Channels: Typed conduits for goroutine communication
+  - WaitGroup: Wait for goroutines to complete
+  - Mutex: Protect shared data from race conditions
+  - Select: Handle multiple channel operations
 
-// the main function in itself is a goroutine,
-// that get started when the program starts up
+"Don't communicate by sharing memory; share memory by communicating."
+
+GOROUTINES:
+  go functionName()        // Start goroutine
+  go func() { ... }()      // Anonymous goroutine
+
+CHANNELS:
+  ch := make(chan Type)    // Unbuffered channel
+  ch := make(chan Type, n) // Buffered channel (capacity n)
+  ch <- value              // Send
+  value := <-ch            // Receive
+  close(ch)                // Close channel
+
+SYNC PRIMITIVES:
+  sync.WaitGroup           // Wait for goroutines
+  sync.Mutex               // Mutual exclusion lock
+  sync.RWMutex             // Read/Write lock
+
+*/
+
 func main() {
-	//// 6. Select ////
+	// 1. BASIC GOROUTINE
+
+	fmt.Println("--- Basic Goroutine ---")
+
+	go sayHello("Goroutine")
+	fmt.Println("Main: Started goroutine")
+	time.Sleep(100 * time.Millisecond) // Wait for goroutine
+
+	// 2. WAITGROUP - PROPER SYNCHRONIZATION
+
+	fmt.Println("\n--- WaitGroup ---")
+
+	var wg sync.WaitGroup
+
+	for i := 1; i <= 3; i++ {
+		wg.Add(1)
+		go func(n int) {
+			defer wg.Done()
+			fmt.Printf("Worker %d starting\n", n)
+			time.Sleep(50 * time.Millisecond)
+			fmt.Printf("Worker %d done\n", n)
+		}(i)
+	}
+
+	wg.Wait()
+	fmt.Println("All workers finished")
+
+	// 3. UNBUFFERED CHANNELS
+
+	fmt.Println("\n--- Unbuffered Channels ---")
+
+	ch := make(chan string)
+
+	go func() {
+		ch <- "Hello from goroutine!"
+	}()
+
+	msg := <-ch // Blocks until message received
+	fmt.Println("Received:", msg)
+
+	// 4. BUFFERED CHANNELS
+
+	fmt.Println("\n--- Buffered Channels ---")
+
+	buffered := make(chan int, 3)
+
+	// Can send without blocking (up to buffer size)
+	buffered <- 1
+	buffered <- 2
+	buffered <- 3
+
+	fmt.Println("Buffer length:", len(buffered))
+	fmt.Println("Buffer capacity:", cap(buffered))
+
+	fmt.Println(<-buffered) // 1
+	fmt.Println(<-buffered) // 2
+	fmt.Println(<-buffered) // 3
+
+	// 5. CHANNEL DIRECTIONS
+
+	fmt.Println("\n--- Channel Directions ---")
+
+	ch2 := make(chan int)
+
+	go sender(ch2)   // Send-only in function
+	receiver(ch2)    // Receive-only in function
+
+	// 6. CLOSING CHANNELS AND RANGE
+
+	fmt.Println("\n--- Closing Channels ---")
+
+	numbers := make(chan int, 5)
+
+	go func() {
+		for i := 1; i <= 5; i++ {
+			numbers <- i
+		}
+		close(numbers) // Signal no more values
+	}()
+
+	// Range stops when channel is closed
+	fmt.Print("Numbers: ")
+	for num := range numbers {
+		fmt.Printf("%d ", num)
+	}
+	fmt.Println()
+
+	// Check if channel is closed
+	closedCh := make(chan int)
+	close(closedCh)
+	val, ok := <-closedCh
+	fmt.Printf("Closed channel: value=%d, open=%v\n", val, ok)
+
+	// 7. SELECT STATEMENT
+
+	fmt.Println("\n--- Select Statement ---")
 
 	c1 := make(chan string)
 	c2 := make(chan string)
 
 	go func() {
-		time.Sleep(1000 * time.Millisecond)
-		c1 <- "first"
+		time.Sleep(50 * time.Millisecond)
+		c1 <- "from channel 1"
 	}()
+
 	go func() {
-		time.Sleep(2000 * time.Millisecond)
-		c2 <- "second"
+		time.Sleep(100 * time.Millisecond)
+		c2 <- "from channel 2"
 	}()
 
-	// The syntax is interesting, the case is executed when the channel
-	// has something to provide, and we assign it to msg1 or msg2 within the case.
-
+	// Receive from whichever is ready first
 	for i := 0; i < 2; i++ {
 		select {
 		case msg1 := <-c1:
-			fmt.Println("got the", msg1)
+			fmt.Println("Received:", msg1)
 		case msg2 := <-c2:
-			fmt.Println("got the", msg2)
+			fmt.Println("Received:", msg2)
 		}
 	}
 
-	// c1 := make(chan string)
+	// 8. SELECT WITH TIMEOUT
 
-	// go func() {
-	// 	defer close(c1)
-	// 	time.Sleep(1000 * time.Millisecond)
-	// 	c1 <- "first"
-	// }()
+	fmt.Println("\n--- Select with Timeout ---")
 
-	// select {
-	// case msg1 := <-c1:
-	// 	fmt.Println("Received", msg1)
-	// }
+	slowCh := make(chan string)
 
-	//// 5. Channels ////
+	go func() {
+		time.Sleep(200 * time.Millisecond)
+		slowCh <- "slow response"
+	}()
 
-	// buffered channel
-	// limit := 5
-	// intStream := make(chan rune, limit)
-	// go func() {
-	// 	defer close(intStream)
-	// 	defer fmt.Println("Rune sending Done.")
-	// 	for i := 0; i < limit; i++ {
-	// 		r := 'A' + rune(i)
-	// 		fmt.Printf("Sending - %c\n", r)
-	// 		intStream <- r
-	// 	}
-	// }()
+	select {
+	case result := <-slowCh:
+		fmt.Println("Got:", result)
+	case <-time.After(100 * time.Millisecond):
+		fmt.Println("Timeout!")
+	}
 
-	// for rune := range intStream {
-	// 	fmt.Printf("Received - %c\n", rune)
-	// }
+	// Drain the channel to avoid goroutine leak
+	go func() { <-slowCh }()
 
-	// unbuffered channel
-	// strStream := make(chan string) // channel are typed,
-	// // so we can only send strings through this channel
-	// go func() {
-	// 	defer close(strStream)
-	// 	for i := 0; i < 26; i++ {
-	// 		chr := string(int('A') + i)
-	// 		strStream <- string(chr)
-	// 	}
-	// }()
+	// 9. SELECT WITH DEFAULT (NON-BLOCKING)
 
-	// for str := range strStream {
-	// 	fmt.Printf("%s ", str)
-	// }
+	fmt.Println("\n--- Non-blocking Select ---")
 
-	/// 4. Mutex ////
+	messages := make(chan string)
 
-	// var str string
-	// var mutex sync.Mutex
+	select {
+	case msg := <-messages:
+		fmt.Println("Received:", msg)
+	default:
+		fmt.Println("No message available")
+	}
 
-	// inc := func() {
-	// 	mutex.Lock()
-	// 	defer mutex.Unlock()
-	// 	str += "A"
-	// 	fmt.Println("Appending:", str)
-	// }
+	// 10. MUTEX - PROTECTING SHARED DATA
 
-	// dec := func() {
-	// 	mutex.Lock()
-	// 	defer mutex.Unlock()
-	// 	if len(str) > 0 {
-	// 		str = str[:len(str)-1]
-	// 		fmt.Println("Removing Last:", str)
-	// 	} else {
-	// 		fmt.Println("Not modifying empty string")
-	// 	}
-	// }
+	fmt.Println("\n--- Mutex ---")
 
-	// upperLimit := 5
-	// var wg sync.WaitGroup
-	// wg.Add(upperLimit)
-	// for i := 0; i < upperLimit; i++ {
-	// 	go func() {
-	// 		defer wg.Done()
-	// 		inc()
-	// 	}()
-	// }
+	var (
+		counter int
+		mu      sync.Mutex
+		wg2     sync.WaitGroup
+	)
 
-	// wg.Add(upperLimit)
-	// for i := 0; i < upperLimit; i++ {
-	// 	go func() {
-	// 		defer wg.Done()
-	// 		dec()
-	// 	}()
-	// }
+	for i := 0; i < 100; i++ {
+		wg2.Add(1)
+		go func() {
+			defer wg2.Done()
+			mu.Lock()
+			counter++
+			mu.Unlock()
+		}()
+	}
 
-	// wg.Wait()
-	// fmt.Println("Function main complete.")
+	wg2.Wait()
+	fmt.Println("Counter:", counter) // Always 100
 
-	/////* 3. compressit */////
+	// 11. WORKER POOL PATTERN
 
-	// var wg sync.WaitGroup
+	fmt.Println("\n--- Worker Pool ---")
 
-	// var i int = -1
-	// var file string
-	// for i, file = range os.Args[1:] {
-	// 	wg.Add(1)
-	// 	go func(fileName string) {
-	// 		defer wg.Done()
-	// 		compressit(fileName)
-	// 	}(file)
+	jobs := make(chan int, 5)
+	results := make(chan int, 5)
 
-	// }
-	// wg.Wait()
-	// fmt.Printf("Compressed %d files\n", i+1)
+	// Start 3 workers
+	for w := 1; w <= 3; w++ {
+		go worker(w, jobs, results)
+	}
 
-	/////* 2. WaitGroup */////
-	// var wg sync.WaitGroup
+	// Send 5 jobs
+	for j := 1; j <= 5; j++ {
+		jobs <- j
+	}
+	close(jobs)
 
-	// wg.Add(1)
-	// go func() {
-	// 	defer wg.Done()
-	// 	fmt.Println("1st goroutine executing")
-	// 	time.Sleep(1000 * time.Millisecond)
-	// }()
+	// Collect results
+	for r := 1; r <= 5; r++ {
+		fmt.Println("Result:", <-results)
+	}
 
-	// wg.Add(1)
-	// go func() {
-	// 	defer wg.Done()
-	// 	fmt.Println("2nd goroutine executing")
-	// 	time.Sleep(2000 * time.Millisecond)
-	// }()
+	// 12. DONE CHANNEL PATTERN
 
-	// wg.Wait()
-	// fmt.Println("All goroutines finished executing")
+	fmt.Println("\n--- Done Channel Pattern ---")
 
-	/////* 1. Simple goroutine */////
+	done := make(chan struct{})
 
-	// cores := runtime.NumCPU()
-	// println("Number of cores: ", cores)
+	go func() {
+		for {
+			select {
+			case <-done:
+				fmt.Println("Worker: shutting down")
+				return
+			default:
+				fmt.Println("Worker: working...")
+				time.Sleep(50 * time.Millisecond)
+			}
+		}
+	}()
 
-	// var wg sync.WaitGroup
-	// for _, s := range []string{"1", "2", "3"} {
-	// 	wg.Add(1)
-	// 	go func(s string) {
-	// 		defer wg.Done()
-	// 		fmt.Println(s)
-	// 	}(s)
-	// 	wg.Wait()
-	// }
+	time.Sleep(150 * time.Millisecond)
+	close(done) // Signal worker to stop
+	time.Sleep(50 * time.Millisecond)
 
-	// if we don't sleep, the main goroutine will exit
-	// time.Sleep(time.Microsecond * 1000)
+	// 13. FAN-OUT FAN-IN
+
+	fmt.Println("\n--- Fan-Out Fan-In ---")
+
+	input := make(chan int)
+	output := fanIn(
+		square(input),
+		square(input),
+	)
+
+	go func() {
+		for i := 1; i <= 4; i++ {
+			input <- i
+		}
+		close(input)
+	}()
+
+	for result := range output {
+		fmt.Printf("Squared: %d\n", result)
+	}
+
+	fmt.Println("\n--- End ---")
+}
+
+// HELPER FUNCTIONS
+
+func sayHello(from string) {
+	fmt.Printf("Hello from %s!\n", from)
+}
+
+// sender only sends to channel
+func sender(ch chan<- int) {
+	ch <- 42
+}
+
+// receiver only receives from channel
+func receiver(ch <-chan int) {
+	fmt.Println("Received:", <-ch)
+}
+
+// worker processes jobs from channel
+func worker(id int, jobs <-chan int, results chan<- int) {
+	for j := range jobs {
+		fmt.Printf("Worker %d processing job %d\n", id, j)
+		time.Sleep(20 * time.Millisecond)
+		results <- j * 2
+	}
+}
+
+// square reads from input, squares, sends to output
+func square(input <-chan int) <-chan int {
+	output := make(chan int)
+	go func() {
+		for n := range input {
+			output <- n * n
+		}
+		close(output)
+	}()
+	return output
+}
+
+// fanIn merges multiple channels into one
+func fanIn(channels ...<-chan int) <-chan int {
+	var wg sync.WaitGroup
+	output := make(chan int)
+
+	for _, ch := range channels {
+		wg.Add(1)
+		go func(c <-chan int) {
+			defer wg.Done()
+			for n := range c {
+				output <- n
+			}
+		}(ch)
+	}
+
+	go func() {
+		wg.Wait()
+		close(output)
+	}()
+
+	return output
 }

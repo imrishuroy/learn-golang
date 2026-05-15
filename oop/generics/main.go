@@ -1,8 +1,6 @@
 package main
 
-import (
-	"fmt"
-)
+import "fmt"
 
 /*
   GENERICS IN GO (Go 1.18+)
@@ -14,18 +12,13 @@ KEY POINTS:
   - Reduces code duplication while maintaining type safety
 
 SYNTAX:
-  func Name[T constraint](param T) T { }     // Generic function
-  type Name[T constraint] struct { }         // Generic type
+  func Name[T constraint](param T) T { }     // generic function
+  type Name[T constraint] struct { }          // generic type
 
 COMMON CONSTRAINTS:
-  any           // Any type (alias for interface{})
-  comparable    // Types that support == and !=
-  Custom        // Interface with type sets
-
-TYPE SETS (Go 1.18+):
-  ~int          // int and types with underlying type int
-  int | float64 // int OR float64
-  ~int | ~float64 // int-like OR float64-like
+  - any              : any type (alias for interface{})
+  - comparable       : types supporting == and !=
+  - Ordered : types supporting < > <= >=
 
 WHY GENERICS:
   Before generics, you had to either:
@@ -38,9 +31,9 @@ WHY GENERICS:
 func main() {
 	// 1. THE PROBLEM: CODE DUPLICATION
 
-	fmt.Println("--- The Problem (Without Generics) ---")
+	fmt.Println("--- The Problem ---")
 
-	// Without generics, need separate functions for each type
+	// Without generics, we need separate functions for each type
 	intSlice := []int{10, 20, 15, -10}
 	strSlice := []string{"Go", "is", "awesome"}
 
@@ -49,7 +42,7 @@ func main() {
 
 	// 2. GENERIC FUNCTION - THE SOLUTION
 
-	fmt.Println("\n--- Generic Function ---")
+	fmt.Println("\n--- Generic Index Function ---")
 
 	// One function works for all comparable types
 	fmt.Println("Index[int]:", Index(intSlice, 15))
@@ -57,16 +50,16 @@ func main() {
 	fmt.Println("Index (not found):", Index(intSlice, 999))
 
 	// Type inference - compiler figures out the type
-	floatSlice := []float64{1.1, 2.2, 3.3}
-	fmt.Println("Index (inferred):", Index(floatSlice, 2.2))
+	fmt.Println("Index (inferred):", Index([]float64{1.1, 2.2, 3.3}, 2.2))
 
 	// 3. MULTIPLE TYPE PARAMETERS
 
 	fmt.Println("\n--- Multiple Type Parameters ---")
 
 	m := map[string]int{"one": 1, "two": 2, "three": 3}
-	keys := Keys(m)
-	values := Values(m)
+
+	keys := MapKeys(m)
+	values := MapValues(m)
 
 	fmt.Println("Keys:", keys)
 	fmt.Println("Values:", values)
@@ -82,19 +75,18 @@ func main() {
 
 	// 'comparable' constraint - types that support ==
 	fmt.Println("Contains 2:", Contains([]int{1, 2, 3}, 2))
-	fmt.Println("Contains 'x':", Contains([]string{"a", "b", "c"}, "x"))
+	fmt.Println("Contains x:", Contains([]string{"a", "b", "c"}, "x"))
 
-	// 5. CUSTOM CONSTRAINTS
-
-	fmt.Println("\n--- Custom Constraints ---")
-
-	// Number constraint for numeric types
+	// Custom Number constraint
 	fmt.Println("Sum ints:", Sum([]int{1, 2, 3, 4, 5}))
 	fmt.Println("Sum floats:", Sum([]float64{1.1, 2.2, 3.3}))
 
-	// Ordered constraint for comparable types
-	fmt.Println("Min(3,1,4,1,5):", Min(3, 1, 4, 1, 5))
-	fmt.Println("Max(3,1,4,1,5):", Max(3, 1, 4, 1, 5))
+	// 5. GENERIC MIN/MAX
+
+	fmt.Println("\n--- Min/Max ---")
+
+	fmt.Println("Min(3, 1, 4, 1, 5):", Min(3, 1, 4, 1, 5))
+	fmt.Println("Max(3, 1, 4, 1, 5):", Max(3, 1, 4, 1, 5))
 	fmt.Println("Min strings:", Min("banana", "apple", "cherry"))
 
 	// 6. GENERIC TYPES (STRUCTS)
@@ -130,7 +122,7 @@ func main() {
 	swapped := pair1.Swap()
 	fmt.Printf("Swapped: %d = %s\n", swapped.First, swapped.Second)
 
-	// 8. MAP, FILTER, REDUCE
+	// 8. GENERIC MAP/FILTER/REDUCE
 
 	fmt.Println("\n--- Map/Filter/Reduce ---")
 
@@ -155,52 +147,35 @@ func main() {
 	product := Reduce(nums, 1, func(acc, x int) int { return acc * x })
 	fmt.Println("Product:", product)
 
-	// 9. STRINGER CONSTRAINT EXAMPLE
+	// 9. TYPE SETS (INTERFACE CONSTRAINTS)
 
-	fmt.Println("\n--- Stringer Constraint ---")
+	fmt.Println("\n--- Type Sets ---")
 
-	people := []Person{
-		{"Alice", 30},
-		{"Bob", 25},
-	}
-	roles := []Role{
-		{"Developer", 5},
-		{"Architect", 3},
-	}
+	// Custom constraint using type sets
+	fmt.Println("Double int:", Double(5))
+	fmt.Println("Double float:", Double(3.14))
+	fmt.Println("Double string:", Double("Go"))
 
-	fmt.Println("People strings:", Stringify(people))
-	fmt.Println("Role strings:", Stringify(roles))
-
-	// 10. GENERIC CACHE
+	// 10. PRACTICAL: GENERIC CACHE
 
 	fmt.Println("\n--- Generic Cache ---")
 
 	cache := NewCache[string, int]()
 	cache.Set("a", 1)
 	cache.Set("b", 2)
-	cache.Set("c", 3)
 
 	if val, ok := cache.Get("a"); ok {
 		fmt.Println("cache[a] =", val)
 	}
 
-	if _, ok := cache.Get("missing"); !ok {
-		fmt.Println("cache[missing] not found")
+	if _, ok := cache.Get("c"); !ok {
+		fmt.Println("cache[c] not found")
 	}
 
 	fmt.Println("All keys:", cache.Keys())
-
-	// 11. TYPE SET CONSTRAINTS
-
-	fmt.Println("\n--- Type Set Constraints ---")
-
-	// Addable works with int, float64, and string
-	fmt.Println("Double int:", Double(5))
-	fmt.Println("Double float:", Double(3.14))
-	fmt.Println("Double string:", Double("Go"))
 }
 
-// NON-GENERIC FUNCTIONS (OLD WAY)
+// NON-GENERIC FUNCTIONS (THE OLD WAY)
 
 func IndexInt(s []int, x int) int {
 	for i, v := range s {
@@ -222,7 +197,8 @@ func IndexString(s []string, x string) int {
 
 // GENERIC FUNCTIONS
 
-// Index returns the index of x in s, or -1 if not found
+// Index returns the index of x in slice s, or -1 if not found
+// [T comparable] means T must support == operator
 func Index[T comparable](s []T, x T) int {
 	for i, v := range s {
 		if v == x {
@@ -232,8 +208,8 @@ func Index[T comparable](s []T, x T) int {
 	return -1
 }
 
-// Keys returns all keys from a map
-func Keys[K comparable, V any](m map[K]V) []K {
+// MapKeys returns all keys from a map
+func MapKeys[K comparable, V any](m map[K]V) []K {
 	keys := make([]K, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
@@ -241,8 +217,8 @@ func Keys[K comparable, V any](m map[K]V) []K {
 	return keys
 }
 
-// Values returns all values from a map
-func Values[K comparable, V any](m map[K]V) []V {
+// MapValues returns all values from a map
+func MapValues[K comparable, V any](m map[K]V) []V {
 	values := make([]V, 0, len(m))
 	for _, v := range m {
 		values = append(values, v)
@@ -250,7 +226,7 @@ func Values[K comparable, V any](m map[K]V) []V {
 	return values
 }
 
-// PrintAny prints any value
+// PrintAny prints any value (any = interface{})
 func PrintAny[T any](v T) {
 	fmt.Printf("  PrintAny: %v (type: %T)\n", v, v)
 }
@@ -265,8 +241,6 @@ func Contains[T comparable](s []T, elem T) bool {
 	return false
 }
 
-// CUSTOM CONSTRAINTS
-
 // Number constraint for numeric types
 type Number interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 |
@@ -274,7 +248,7 @@ type Number interface {
 		~float32 | ~float64
 }
 
-// Ordered constraint for comparable types
+// Ordered constraint for types that support < > <= >=
 type Ordered interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 |
 		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
@@ -318,36 +292,6 @@ func Max[T Ordered](values ...T) T {
 		}
 	}
 	return max
-}
-
-// STRINGER CONSTRAINT
-
-// Stringify converts a slice of Stringer types to strings
-func Stringify[T fmt.Stringer](s []T) []string {
-	result := make([]string, len(s))
-	for i, v := range s {
-		result[i] = v.String()
-	}
-	return result
-}
-
-// Types that implement fmt.Stringer
-type Person struct {
-	Name string
-	Age  int
-}
-
-func (p Person) String() string {
-	return fmt.Sprintf("%s (%d years)", p.Name, p.Age)
-}
-
-type Role struct {
-	Name  string
-	Years int
-}
-
-func (r Role) String() string {
-	return fmt.Sprintf("%s for %d years", r.Name, r.Years)
 }
 
 // GENERIC TYPES
@@ -416,6 +360,18 @@ func Reduce[T, U any](s []T, initial U, fn func(U, T) U) U {
 	return result
 }
 
+// TYPE SETS
+
+// Addable types that support + operator
+type Addable interface {
+	~int | ~float64 | ~string
+}
+
+// Double doubles a value (works with int, float64, string)
+func Double[T Addable](v T) T {
+	return v + v
+}
+
 // GENERIC CACHE
 
 type Cache[K comparable, V any] struct {
@@ -436,17 +392,5 @@ func (c *Cache[K, V]) Get(key K) (V, bool) {
 }
 
 func (c *Cache[K, V]) Keys() []K {
-	return Keys(c.data)
-}
-
-// TYPE SET CONSTRAINT
-
-// Addable types that support + operator
-type Addable interface {
-	~int | ~float64 | ~string
-}
-
-// Double doubles a value (works with int, float64, string)
-func Double[T Addable](v T) T {
-	return v + v
+	return MapKeys(c.data)
 }

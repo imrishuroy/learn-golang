@@ -1,138 +1,329 @@
-// https://medium.com/gitconnected/learning-go-part-two-types-loops-and-flow-control-45251c7adff8
 package main
 
 import (
 	"fmt"
-	"reflect"
 	"runtime"
 	"time"
 )
 
-const Pi = 3.14159
+/*
+  DATA TYPES, LOOPS, AND FLOW CONTROL IN GO
+
+KEY POINTS:
+  - Go is statically typed with type inference
+  - Only one loop construct: for (no while, do-while)
+  - Switch doesn't need break (no fallthrough by default)
+  - Defer delays execution until function returns
+
+DATA TYPES:
+  Basic: bool, string, int, float64, byte, rune
+  Composite: array, slice, map, struct
+  Reference: pointer, channel, function
+
+LOOPS:
+  for init; cond; post { }   // C-style for
+  for condition { }          // while
+  for { }                    // infinite
+  for i, v := range coll { } // range
+
+FLOW CONTROL:
+  if, if-else, if-else if-else
+  switch (with/without expression)
+  select (for channels)
+  defer (cleanup)
+
+*/
+
+// Constants
+const (
+	Pi        = 3.14159
+	MaxUsers  = 100
+	AppName   = "GoTutorial"
+)
 
 func main() {
+	// ==================== DATA TYPES ====================
 
-	// defer ( defer is used to ensure that a function call is performed later
-	// in a program’s execution, usually for purposes of cleanup.)
-	defer fmt.Println("This will be printed at the end")
+	fmt.Println("========== DATA TYPES ==========")
 
-	// Deferred function calls are pushed onto a stack. When a function returns,
-	// its deferred calls are executed in last-in-first-out order.
-	defer fmt.Println("This will be printed second")
+	// 1. Variable Declaration
+	fmt.Println("\n--- Variable Declaration ---")
 
-	// flow control
+	var a int = 10           // Explicit type
+	var b = 20               // Type inferred
+	c := 30                  // Short declaration (most common)
+	var d int                // Zero value (0)
 
-	// 1. If Else
-	// If else do not need parentheses, just like for loop
-	// but blocks of code do need the curly braces, even if one statement.
+	fmt.Printf("a=%d, b=%d, c=%d, d=%d\n", a, b, c, d)
 
-	number := 10
-	if number%2 == 0 {
-		fmt.Println("Even Number")
+	// Multiple variables
+	var x, y, z int = 1, 2, 3
+	p, q, r := "hello", 42, true
+	fmt.Println("Multiple:", x, y, z)
+	fmt.Println("Different types:", p, q, r)
 
-	} else {
-		fmt.Println("Odd Number")
+	// 2. Basic Types
+	fmt.Println("\n--- Basic Types ---")
+
+	var (
+		isActive bool    = true
+		name     string  = "Go"
+		age      int     = 10
+		pi       float64 = 3.14159
+		char     rune    = 'G'          // Unicode code point
+		data     byte    = 255          // Alias for uint8
+	)
+
+	fmt.Printf("bool: %v\n", isActive)
+	fmt.Printf("string: %s\n", name)
+	fmt.Printf("int: %d\n", age)
+	fmt.Printf("float64: %.2f\n", pi)
+	fmt.Printf("rune: %c (value: %d)\n", char, char)
+	fmt.Printf("byte: %d\n", data)
+
+	// 3. Type Conversion
+	fmt.Println("\n--- Type Conversion ---")
+
+	intVal := 42
+	floatVal := float64(intVal)
+	uintVal := uint(intVal)
+
+	fmt.Printf("int: %d → float64: %.1f → uint: %d\n", intVal, floatVal, uintVal)
+
+	// Float to int truncates
+	pi2 := 3.99
+	truncated := int(pi2)
+	fmt.Printf("float %.2f → int %d (truncates)\n", pi2, truncated)
+
+	// 4. Constants
+	fmt.Println("\n--- Constants ---")
+
+	fmt.Println("Pi:", Pi)
+	fmt.Println("MaxUsers:", MaxUsers)
+	fmt.Println("AppName:", AppName)
+
+	// iota - auto-incrementing
+	const (
+		Sunday = iota  // 0
+		Monday         // 1
+		Tuesday        // 2
+		Wednesday      // 3
+	)
+	fmt.Println("Wednesday =", Wednesday)
+
+	// iota with expression
+	const (
+		_  = iota             // 0 (ignored)
+		KB = 1 << (10 * iota) // 1 << 10 = 1024
+		MB                    // 1 << 20
+		GB                    // 1 << 30
+	)
+	fmt.Printf("KB=%d, MB=%d, GB=%d\n", KB, MB, GB)
+
+	// ==================== LOOPS ====================
+
+	fmt.Println("\n========== LOOPS ==========")
+
+	// 5. C-style For Loop
+	fmt.Println("\n--- C-style For ---")
+
+	fmt.Print("0 to 4: ")
+	for i := 0; i < 5; i++ {
+		fmt.Print(i, " ")
 	}
+	fmt.Println()
 
-	limit := 10
-	// we can also declare a variable in if condition
-	if x := 4; x < limit {
-		fmt.Println("x is less than limit")
-	} else {
-		fmt.Println("x is greater than limit")
+	// 6. While-style Loop
+	fmt.Println("\n--- While-style ---")
 
+	count := 0
+	fmt.Print("While count < 3: ")
+	for count < 3 {
+		fmt.Print(count, " ")
+		count++
 	}
+	fmt.Println()
 
-	// 2.Switch Case
-	// An important difference to many languages is that Go’s switch cases
-	// need not be constants and the values need not be integers.
-	// and there is no need of break statement
+	// 7. Infinite Loop with Break
+	fmt.Println("\n--- Infinite Loop ---")
 
-	t := time.Now()
-	switch {
-	case t.Hour() < 12:
-		fmt.Println("Good Morning")
-	case t.Hour() < 17:
-		fmt.Println("Good Afternoon")
-	default:
-		fmt.Println("Good Evening")
-	}
-
-	// Here is an example where the switch with a condition,
-	// where it evaluated the variable os.
-	switch os := runtime.GOOS; os {
-	case "darwin":
-		fmt.Println("Mac OS")
-	case "linux":
-		fmt.Println("Linux")
-	case "windows":
-		fmt.Println("Windows")
-	default:
-		fmt.Println("Other OS", runtime.GOOS)
-	}
-
-	// while loop
-	// Eg - 1
-	i := 0
-	for i < 5 {
-		fmt.Println("Value of i is: ", i)
-		i++
-	}
-
-	// Eg - 2 ( use of break )
-	j := 0
-	for true {
-		fmt.Println("Value of j is: ", j)
-		j++
-		if j > 10 {
+	n := 0
+	fmt.Print("Break at 3: ")
+	for {
+		fmt.Print(n, " ")
+		n++
+		if n >= 3 {
 			break
 		}
 	}
+	fmt.Println()
 
-	// loops
-	numbers := [5]int{4, 8, 12, 16, 20}
+	// 8. Range Loop
+	fmt.Println("\n--- Range Loop ---")
 
-	// _ is used to ignore the index,
-	// as Go won't compile when a variable is declared and not used
-	for _, item := range numbers {
-		fmt.Println("Value of item is: ", item)
+	nums := []int{10, 20, 30, 40, 50}
+
+	fmt.Print("Index and value: ")
+	for i, v := range nums {
+		fmt.Printf("[%d]=%d ", i, v)
+	}
+	fmt.Println()
+
+	fmt.Print("Value only: ")
+	for _, v := range nums {
+		fmt.Print(v, " ")
+	}
+	fmt.Println()
+
+	fmt.Print("Index only: ")
+	for i := range nums {
+		fmt.Print(i, " ")
+	}
+	fmt.Println()
+
+	// Range over string (iterates runes)
+	fmt.Print("Runes in 'Go语言': ")
+	for i, r := range "Go语言" {
+		fmt.Printf("[%d:%c] ", i, r)
+	}
+	fmt.Println()
+
+	// 9. Continue
+	fmt.Println("\n--- Continue ---")
+
+	fmt.Print("Skip evens: ")
+	for i := 0; i < 10; i++ {
+		if i%2 == 0 {
+			continue
+		}
+		fmt.Print(i, " ")
+	}
+	fmt.Println()
+
+	// 10. Labeled Break
+	fmt.Println("\n--- Labeled Break ---")
+
+outer:
+	for i := 0; i < 3; i++ {
+		for j := 0; j < 3; j++ {
+			if i == 1 && j == 1 {
+				fmt.Println("Breaking out of both loops")
+				break outer
+			}
+			fmt.Printf("i=%d, j=%d\n", i, j)
+		}
 	}
 
-	for i := 0; i < 5; i++ {
-		fmt.Println("Value of i is: ", i)
+	// ==================== FLOW CONTROL ====================
+
+	fmt.Println("\n========== FLOW CONTROL ==========")
+
+	// 11. If-Else
+	fmt.Println("\n--- If-Else ---")
+
+	number := 10
+	if number > 0 {
+		fmt.Println("Positive")
+	} else if number < 0 {
+		fmt.Println("Negative")
+	} else {
+		fmt.Println("Zero")
 	}
 
-	const name3 = "Rishu"
-	fmt.Println("Hey,", name3, "the value if Pi is", Pi)
+	// If with short statement
+	if val := number * 2; val > 15 {
+		fmt.Printf("%d * 2 = %d (greater than 15)\n", number, val)
+	}
 
-	// type inference
-	var name = "Rishu"
-	name2 := "Prince"
-	fmt.Println("This is a type ", reflect.TypeOf(name), "with value", name)
-	fmt.Println("This is a type ", reflect.TypeOf(name2), "with value", name2)
-	// we can also do this with %T ( type ) &v ( value )
-	fmt.Printf("This is a type %T with value %v\n", name, name)
+	// 12. Switch
+	fmt.Println("\n--- Switch ---")
 
-	var x int = 45 / 10
-	var y = 7 - x
-	z := 32 / 8
-	z = 7
-	fmt.Println("Value of x, y, and z is: ", x, y, z)
+	day := "Wednesday"
+	switch day {
+	case "Monday":
+		fmt.Println("Start of week")
+	case "Wednesday":
+		fmt.Println("Midweek")
+	case "Friday":
+		fmt.Println("TGIF!")
+	case "Saturday", "Sunday": // Multiple values
+		fmt.Println("Weekend!")
+	default:
+		fmt.Println("Regular day")
+	}
 
-	// assign multiple variables
-	a, b, c := 5, 7, 9
-	fmt.Println("Value of a, b, and c is: ", a, b, c)
+	// Switch without expression (like if-else chain)
+	hour := time.Now().Hour()
+	switch {
+	case hour < 12:
+		fmt.Println("Good morning!")
+	case hour < 17:
+		fmt.Println("Good afternoon!")
+	default:
+		fmt.Println("Good evening!")
+	}
 
-	floatNum := 3.14
-	fmt.Printf("Float number %f\n", floatNum)
+	// Switch with short statement
+	switch os := runtime.GOOS; os {
+	case "darwin":
+		fmt.Println("Running on macOS")
+	case "linux":
+		fmt.Println("Running on Linux")
+	default:
+		fmt.Println("Running on", os)
+	}
 
-	// The allowed specifiers for printf follow these conventions.
+	// Fallthrough (explicit)
+	fmt.Println("\nFallthrough example:")
+	num := 1
+	switch num {
+	case 1:
+		fmt.Println("One")
+		fallthrough
+	case 2:
+		fmt.Println("Two (fallthrough)")
+	case 3:
+		fmt.Println("Three")
+	}
 
-	// %v — formats the value in a default format
-	// %d — formats decimal integers
-	// %t — formats true or false values
-	// %g — formats the floating-point numbers
-	// %s — formats string values
-	// %b — formats base 22 numbers
-	// %o — formats base 88 numbers
+	// 13. Defer
+	fmt.Println("\n--- Defer ---")
+
+	fmt.Println("Counting with defer:")
+	deferDemo()
+
+	// Defer captures values at defer time
+	fmt.Println("\nDefer value capture:")
+	captureDemo()
+
+	// 14. Printf Specifiers
+	fmt.Println("\n--- Printf Specifiers ---")
+
+	fmt.Printf("%%v (value): %v\n", nums)
+	fmt.Printf("%%+v (with fields): %+v\n", struct{ X, Y int }{1, 2})
+	fmt.Printf("%%T (type): %T\n", nums)
+	fmt.Printf("%%d (decimal): %d\n", 42)
+	fmt.Printf("%%f (float): %f\n", 3.14159)
+	fmt.Printf("%%.2f (precision): %.2f\n", 3.14159)
+	fmt.Printf("%%s (string): %s\n", "hello")
+	fmt.Printf("%%q (quoted): %q\n", "hello")
+	fmt.Printf("%%t (bool): %t\n", true)
+	fmt.Printf("%%p (pointer): %p\n", &nums)
+}
+
+func deferDemo() {
+	defer fmt.Println("3 (deferred last)")
+	defer fmt.Println("2 (deferred second)")
+	defer fmt.Println("1 (deferred first)")
+	fmt.Println("0 (runs immediately)")
+}
+
+func captureDemo() {
+	x := 10
+	defer fmt.Printf("  Captured at defer time: %d\n", x)
+	defer func() {
+		fmt.Printf("  Closure sees final value: %d\n", x)
+	}()
+	x = 20
+	fmt.Printf("  Current x: %d\n", x)
 }
